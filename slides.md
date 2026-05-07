@@ -27,7 +27,7 @@ style: |
 ## How to extend AI agents with reusable, version-controlled capabilities
 
 **David Okwii**
-Software Developer · dignited.com
+Lead Software Developer · Serve Digital
 
 Africa's Talking · East Africa Hub
 2026-05-07
@@ -36,12 +36,12 @@ Africa's Talking · East Africa Hub
 
 ## A bit about me
 
+- Lead Software Developer at **Serve Digital**
+- Also run **dignited.com** — Uganda/Africa tech blog (since 2013) — where I've been building production AI agent pipelines
 - Software developer, SEO practitioner, content creator
-- Run **dignited.com** — Uganda/Africa tech blog (since 2013)
-- Currently using AI agents in production for editorial work
 - Today: sharing what I've learned about **building skills**, not just using them
 
-<!-- speaker note: keep this short — 30s. Set up that this is practitioner experience, not theory. -->
+<!-- speaker note: keep this short — 30s. Set up that this is practitioner experience, not theory. Day job + side project gives both depth and breadth. -->
 
 ---
 
@@ -514,7 +514,7 @@ Trigger when the user asks to send an SMS, OTP, alert, ...
 
 ## Required environment variables
 | Variable | Example |
-| AT_USERNAME | `dignited` |
+| AT_USERNAME | `odukar` |
 | AT_API_KEY | `atsk_xxxxx…` |
 
 Never paste the API key into a SKILL.md or commit it to git.

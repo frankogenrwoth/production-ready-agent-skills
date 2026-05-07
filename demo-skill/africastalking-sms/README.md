@@ -1,166 +1,139 @@
-# Demo skill: africastalking-sms
+# africastalking-sms
 
-This is the **live demo skill** for the talk *"Designing Production-Ready Skills for AI Agents"* at Africa's Talking East Africa Hub on 2026-05-07.
-
-## What it does
-
-A Claude Code skill that takes a phone number and a message, then sends a real SMS via the [Africa's Talking](https://africastalking.com/) bulk SMS API. Reads credentials from environment variables (`AT_USERNAME`, `AT_API_KEY`) — never embeds them in the skill files.
-
-## Why this skill, why this venue
-
-- **Tangible end-to-end demo.** The audience sees the SMS arrive on a real phone in the room. You can't fake that.
-- **Uses the venue's own product.** Africa's Talking host the event — showing their API integrated with an AI agent is a respectful nod and a real reference customer story.
-- **Safe credential handling is a teaching point.** The skill doesn't embed the API key; the audience learns the right pattern.
-- **Small enough to walk through end-to-end on stage.** Two files, ~150 lines, zero external dependencies.
-
-## Files
+A [Claude Code skill](https://code.claude.com/docs/en/skills) that sends SMS via the [Africa's Talking](https://africastalking.com/) bulk SMS API.
 
 ```
 africastalking-sms/
-├── SKILL.md              # The skill definition — show this on stage
-├── README.md             # This file (operator notes — not shown on stage)
+├── SKILL.md          # Skill specification — what the agent reads
+├── README.md         # This file — install + use
 └── scripts/
-    └── send_sms.py       # Stdlib-only Python script — show this on stage
+    └── send_sms.py   # Stdlib-only Python; the agent invokes this
 ```
 
-## Setup before the talk (15 min)
+## What it does
 
-### 1. Install the skill into Claude Code
+- Sends one or more SMS messages via Africa's Talking
+- Reads credentials from environment variables — never embeds them
+- Uses Python's standard library only (no `requests`, no `africastalking` SDK)
+- Returns structured JSON: per-recipient status code, cost, message ID
+- Errors out clearly with actionable messages when something is missing
 
-If you've already installed it at `~/.claude/skills/africastalking-sms/`, skip this step. Otherwise:
+## Install
+
+User-level (available across all your Claude Code sessions):
 
 ```bash
 mkdir -p ~/.claude/skills/africastalking-sms/scripts
-cp SKILL.md ~/.claude/skills/africastalking-sms/SKILL.md
+cp SKILL.md         ~/.claude/skills/africastalking-sms/SKILL.md
 cp scripts/send_sms.py ~/.claude/skills/africastalking-sms/scripts/send_sms.py
 chmod +x ~/.claude/skills/africastalking-sms/scripts/send_sms.py
 ```
 
-### 2. Set your AT credentials in your shell
+Project-level (skill ships with a specific repo): copy to `<project-root>/.claude/skills/africastalking-sms/` instead.
 
-For the live demo with real SMS delivery, use **production** credentials. In whatever terminal you'll run Claude Code from:
+## Set credentials
 
-```bash
-export AT_USERNAME="<your-AT-account-username>"
-export AT_API_KEY="<your-production-API-key>"
-```
-
-To make these persistent across terminal sessions, put them in your `~/.zshrc` or `~/.bashrc`:
+Three environment variables, all required:
 
 ```bash
-# Africa's Talking demo creds
-export AT_USERNAME="dignited"   # or whatever your AT username is
-export AT_API_KEY="atsk_..."     # never commit this anywhere
+export AT_USERNAME="<your-AT-username>"           # or 'sandbox' for testing
+export AT_API_KEY="<your-production-api-key>"
+export AT_SENDER_ID="<your-registered-sender-id>" # alphanumeric or shortcode
 ```
 
-**Don't put them in a file inside this folder** — this folder might end up in a public repo or shared with attendees.
+Get them from your [Africa's Talking dashboard](https://account.africastalking.com/). Add to `~/.zshrc` or `~/.bashrc` if you want them persistent across terminal sessions. **Never commit them to git.**
 
-### 3. Verify the skill works (dry-run, no SMS sent)
+## Use
+
+### Through Claude Code (recommended)
+
+In any Claude Code session — terminal, [claude.ai/code](https://claude.ai/code), or another compatible agent — say something like:
+
+> Send an SMS to +256787624334 saying "Server backups completed at 03:00 UTC"
+
+Claude reads `SKILL.md`, decides the skill applies, and runs the script. You get back delivery status in plain language.
+
+### Direct invocation
+
+You can also call the script without an agent:
 
 ```bash
-AT_USERNAME=test AT_API_KEY=test \
-  python3 ~/.claude/skills/africastalking-sms/scripts/send_sms.py \
-  --to "+256700000000" --message "Test" --dry-run
+# Single recipient
+python3 scripts/send_sms.py \
+  --to "+256787624334" \
+  --message "Hello from the script"
+
+# Multiple recipients (comma-separated)
+python3 scripts/send_sms.py \
+  --to "+256700123456,+254700987654,+233200111222" \
+  --message "Meeting moved to 3pm"
+
+# Dry-run — prints the request without sending (api key is masked)
+python3 scripts/send_sms.py --to "+256700000000" --message "Test" --dry-run
+
+# Sandbox endpoint (no real SMS, no credits used)
+AT_USERNAME=sandbox python3 scripts/send_sms.py \
+  --to "+256700000000" --message "Test" --sandbox
 ```
 
-Should output the request body with the api key masked as `***`. If you see this, the script is wired correctly.
+## Flags
 
-### 4. Send a test SMS to your own phone (uses 1 credit)
+| Flag | What it does |
+|---|---|
+| `--to` | Recipient phone number(s) in E.164 format (`+<country><number>`). Comma-separated for multiple. **Required.** |
+| `--message` | The SMS body. **Required.** |
+| `--sender-id` | Override `AT_SENDER_ID` for a single call |
+| `--sandbox` | POST to AT's sandbox endpoint instead of production |
+| `--enqueue` | Tell AT to queue the request and return immediately (useful for bulk) |
+| `--dry-run` | Print the request that would be sent and exit |
 
-```bash
-python3 ~/.claude/skills/africastalking-sms/scripts/send_sms.py \
-  --to "+256<your-number>" \
-  --message "Test from agent-skills demo prep"
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| 0 | At least one recipient was accepted by AT |
+| 1 | Credential or input validation failed |
+| 2 | HTTP / API error from AT |
+
+## Output format
+
+Successful run, single recipient:
+
+```json
+{
+  "ok": true,
+  "endpoint": "production",
+  "summary": "Sent to 1/1 Total Cost: UGX 27.0000",
+  "recipients": 1,
+  "accepted": 1,
+  "details": [
+    {
+      "number": "+256787624334",
+      "status": "Success",
+      "status_code": 100,
+      "cost": "UGX 27.0000",
+      "message_id": "ATXid_846b6de8a47611c792ca6a32931e8a73"
+    }
+  ]
+}
 ```
 
-If your phone buzzes within ~10 seconds, the demo is ready.
+`status_code` follows [AT's status code reference](https://developers.africastalking.com/docs/sms/sending/status_codes). The script treats `100` (Processed), `101` (Sent), and `102` (Queued) as success.
 
-If not, check:
-- Phone number is in E.164 format (must start with `+`)
-- `AT_USERNAME` matches your AT account (production, not "sandbox")
-- `AT_API_KEY` is the production key from the AT dashboard
-- AT account has credits (`account.africastalking.com` to top up)
+## Things to watch for
 
-## On stage — the demo flow (~5 min)
+- **E.164 format is strict.** AT requires `+<country><number>` — `0700123456` (local format) is rejected. Always normalise first.
+- **Sender ID approval takes 24–72 hours.** Your `AT_SENDER_ID` must be registered and approved by AT (and Uganda's regulator) before it's used. Until then, AT may silently fall back to a generic shortcode or reject the message.
+- **Cost is per recipient, per segment.** A 200-character message to 100 people = 100 × 2 segments = 200 billable units.
+- **Production keys ≠ sandbox keys.** A production key won't work against the sandbox endpoint and vice versa. The sandbox username is always `sandbox`.
 
-### Slide setup
+## When this skill is the wrong tool
 
-Have these open in advance, all in your browser:
-- Tab 1: `~/.claude/skills/africastalking-sms/SKILL.md` — viewable in your editor
-- Tab 2: `~/.claude/skills/africastalking-sms/scripts/send_sms.py` — also in your editor
-- Tab 3: A Claude Code session — terminal or claude.ai/code
+- **Long-form messages** (multi-segment) — consider email or push notifications; SMS is per-segment expensive.
+- **Two-way conversations** — AT supports inbound SMS but it requires webhook setup; that's a separate skill.
+- **Voice calls** — AT has a separate Voice API.
+- **WhatsApp** — AT has a separate WhatsApp channel.
 
-### Step 1 — Show the SKILL.md (90 seconds)
+## License
 
-Open the file. Walk through:
-1. The frontmatter — `name`, `description`, `compatibility`. Point at `description` and say "this is what tells Claude when to invoke this skill."
-2. Scroll down — show the "When to use" section, the env-var requirements, the example invocation.
-3. **Highlight the line about not committing the API key.** Pause briefly: "this is the most common mistake people make with skills."
-
-### Step 2 — Show the script (30 seconds)
-
-Quick scroll through `send_sms.py`. Point at:
-- `os.environ.get("AT_API_KEY")` — credentials from env, never embedded
-- `urllib.request` — stdlib only, no SDK dependency
-- The masking in `--dry-run` — never print the key
-
-### Step 3 — Live invocation (90 seconds)
-
-In the Claude Code terminal:
-
-```
-> Send an SMS to +256<volunteer-number-from-audience> saying
-  "Hello from a Claude Code skill at Africa's Talking Kampala"
-```
-
-Watch the agent:
-1. **Discover** the `africastalking-sms` skill (description matches "send an SMS")
-2. **Activate** it (read SKILL.md)
-3. **Execute** — invoke `python3 .../send_sms.py --to ... --message ...`
-4. **Report** — show the JSON response with `accepted: 1`, message ID, cost
-
-### Step 4 — Confirm receipt (60 seconds)
-
-Volunteer holds up their phone with the SMS visible. Audience reaction.
-
-(Or you SMS yourself, walk over to the projector with your phone, show the screen.)
-
-### Step 5 — Recap the three layers (45 seconds)
-
-Point back at the discovery → activation → execution diagram from earlier in the talk. The audience just watched all three happen.
-
-## Backup plans
-
-**If your laptop's wifi/internet is flaky:**
-- Pre-record a short screencast (e.g. with OBS or asciinema) of the demo working at home, show that
-- Switch to dignited.com pipeline as the demo (it works from cloud, not local)
-
-**If the AT account has zero credit:**
-- Top up at https://account.africastalking.com/ before the talk
-- Or switch to `--sandbox` mode for the demo (works without credit, but no real SMS — you'll need to explain that)
-
-**If the script errors live:**
-- It's OK — show the JSON error output, explain that good skills surface errors clearly rather than failing silently
-- Have a recorded successful run ready to fall back to
-
-## Audience-volunteer SMS message ideas
-
-Pick the message that matches the room's energy:
-
-- *"Hello from a Claude Code skill at Africa's Talking Kampala 👋"*
-- *"You just watched an AI agent send this SMS via an open-format skill"*
-- *"agentskills.io — go build one"*
-- *"Karibu Kampala, courtesy of agent skills"*
-
-## Slide references
-
-The slide deck has 4 slides dedicated to this demo (see `slides.md`):
-
-- "Demo time" — what the audience will see
-- "Demo: setup" — credentials + skill installation (mention briefly)
-- "Demo: live" — the actual on-stage execution
-- "What you'd build for your own use case" — leave-behind ideas
-
-## After the talk
-
-If attendees ask for the skill source: point them at `https://agentskills.io/` and tell them this skill will be on your blog within 48h. Don't share the API key. Each attendee creates their own AT account at africastalking.com (free tier exists).
+MIT.

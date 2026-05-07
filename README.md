@@ -1,116 +1,130 @@
-# Designing Production-Ready Skills for AI Agents
+# Production-Ready Agent Skills
 
-Talk for Africa's Talking East Africa Hub · Kampala · 2026-05-07
-[event page](https://community.africastalking.com/events/details/africas-talking-africas-talking-open-community-east-africa-hub-presents-designing-production-ready-skills-for-ai-agents/)
+Slides and a working demo skill from the talk *"Designing Production-Ready Skills for AI Agents"* — given at the **Africa's Talking East Africa Hub** in Kampala on 2026-05-07. [Event page](https://community.africastalking.com/events/details/africas-talking-africas-talking-open-community-east-africa-hub-presents-designing-production-ready-skills-for-ai-agents/).
 
-## Files in this folder
+If you weren't there: this repo is a self-contained introduction to the **agent skill** format — what it is, why it matters, and what makes a skill production-grade — anchored to a concrete working example: a Claude Code skill that sends real SMS via the [Africa's Talking](https://africastalking.com/) bulk SMS API.
 
-| File | What |
+## What's an agent skill?
+
+In plain terms, an agent skill is a how-to guide written for an AI agent. Instead of teaching *you* how to do something, it teaches the *agent* how. A skill is just a folder with a `SKILL.md` (the instructions, plus YAML frontmatter that tells the agent *when* to use it) and optionally a few scripts the agent can run.
+
+The format is open and works across many agents — Claude Code, Cursor, Codex, Gemini CLI, OpenCode, and others. See [agentskills.io](https://agentskills.io) for the spec.
+
+## What's in this repo
+
+| Path | What |
 |---|---|
-| `slides.md` | Marp-flavored markdown source. Edit this if you want to change content. |
-| `slides.pptx` | PowerPoint export. Open in PowerPoint / Keynote / Google Slides / LibreOffice. |
-| `slides.pdf` | PDF export. Use as backup if PPT doesn't render correctly on the venue laptop. |
-| `README.md` | This file — speaker notes, demo prep, Q&A. |
+| `slides.md` | Marp-flavored markdown source of the talk deck |
+| `slides.pptx` | PowerPoint export — open in PowerPoint / Keynote / Google Slides / LibreOffice |
+| `slides.pdf` | PDF export — backup viewing format |
+| `demo-skill/africastalking-sms/` | A working Claude Code skill that sends SMS via Africa's Talking |
 
-## How to present
+## The demo skill: `africastalking-sms`
 
-**Best path:** open `slides.pptx` directly in PowerPoint or Keynote on your laptop. Slide count: ~43.
+The `demo-skill/africastalking-sms/` folder is a complete skill you can install and use today. It:
 
-**Alternative (Google Slides):** upload `slides.pptx` to Google Drive → right-click → Open with Google Slides → it auto-converts. The conversion is usually clean for Marp output.
+- Sends one or more SMS messages via Africa's Talking's bulk SMS API
+- Reads credentials from environment variables — never embeds them in the skill files
+- Uses Python's standard library only — no `requests`, no SDK, no install step beyond Python 3
+- Returns structured JSON (per-recipient status code, cost, message ID)
+- Errors out clearly when credentials or sender ID are missing
 
-**Web fallback:** if you have internet at the venue, you can render the markdown directly:
+### Install
+
 ```bash
-cd /home/oquidave/talks/agent-skills-2026-05-07
-npx @marp-team/marp-cli slides.md --preview
+# User-level: available across all your projects on this machine
+mkdir -p ~/.claude/skills/africastalking-sms/scripts
+cp demo-skill/africastalking-sms/SKILL.md \
+   ~/.claude/skills/africastalking-sms/SKILL.md
+cp demo-skill/africastalking-sms/scripts/send_sms.py \
+   ~/.claude/skills/africastalking-sms/scripts/send_sms.py
+chmod +x ~/.claude/skills/africastalking-sms/scripts/send_sms.py
 ```
 
-## Talk structure (~38 min + Q&A)
+For a project-level install (skill ships with a specific codebase), copy to `<project-root>/.claude/skills/africastalking-sms/` instead.
 
-| Time | Slides | Section |
-|---|---|---|
-| 0:00–2:00 | 1–4 | Intro + audience check |
-| 2:00–5:00 | 5–8 | What's an agent / what's the problem |
-| 5:00–11:00 | 9–14 | **What skills are** (how-to-guide framing) + what they're NOT + format |
-| 11:00–15:00 | 15–18 | Anatomy + real example |
-| 15:00–23:00 | 19–25 | Design principles + anti-patterns |
-| 23:00–32:00 | 26–30 | **Demo (live)** |
-| 32:00–37:00 | 31–37 | Practical next steps + marketplaces + resources |
-| 37:00+ | 38–39 | Q&A / Thanks |
+### Set credentials
 
-## Demo prep checklist (Africa's Talking SMS demo)
+Get them from your [Africa's Talking dashboard](https://account.africastalking.com/), then set in your shell:
 
-**Detailed prep guide:** `demo-skill/africastalking-sms/README.md`
+```bash
+export AT_USERNAME="<your-AT-username>"
+export AT_API_KEY="<your-production-api-key>"
+export AT_SENDER_ID="<your-registered-sender-id>"   # alphanumeric or shortcode
+```
 
-**Quick checklist before the talk:**
+Add them to `~/.zshrc` or `~/.bashrc` if you want them persistent. **Don't commit them to git, ever.**
 
-- [ ] Skill installed at `~/.claude/skills/africastalking-sms/` ✓ (already done)
-- [ ] `AT_USERNAME` set in your shell — `export AT_USERNAME="<your-AT-username>"`
-- [ ] `AT_API_KEY` set in your shell — `export AT_API_KEY="atsk_..."`
-- [ ] Test SMS to your own phone confirms delivery (uses ~1 credit)
-- [ ] AT account has credits — top up at https://account.africastalking.com/ if needed
-- [ ] Editor open with `~/.claude/skills/africastalking-sms/SKILL.md` and `scripts/send_sms.py`
-- [ ] Claude Code session ready (terminal or claude.ai/code)
-- [ ] A volunteer / specific phone number in mind for the live SMS
+### Use it
 
-**Backup plan if AT API or wifi flaky:**
-- Pre-record the demo (asciinema or screencast) — show the recording instead
-- Or fall back to dignited pipeline demo (cloud-based, no local network needed):
-  - Show `https://claude.ai/code/routines/trig_01SX2DUSJS8erZauqvgnPHh7`
-  - Walk through the conversational digest → reply → drafts flow
-  - Open one of the published articles (https://www.dignited.com/119506/... or 119507) as proof
+In any Claude Code session — terminal or [claude.ai/code](https://claude.ai/code) — say something like:
 
-## Key talking points (don't skip)
+> Send an SMS to +256787624334 saying "Server backups completed at 03:00 UTC"
 
-1. **Skills are a folder + SKILL.md** — say this multiple times. Simple framing students remember.
-2. **Description is the most important field** — that's what the agent uses to decide. Bad description = skill never invoked.
-3. **Progressive disclosure** — three stages. The 100-token discovery cost is the magic that makes "100 skills" feasible.
-4. **Process over prose** — the most actionable principle. Show the bad-vs-good example slowly.
-5. **Real production value** — emphasise this isn't theory. Two articles published this week from the pipeline.
+Claude reads the skill's description, decides it's relevant, loads the full instructions, and runs the script. You get back delivery status in plain language.
 
-## Common Q&A
+You can also call the script directly, no agent involved:
 
-**Q: Do skills work with all LLMs or only Claude?**
-A: The format is open and now supported by 30+ products including Claude, GPT-based agents (OpenCode, Codex), Gemini CLI, Cursor, etc. Originally Anthropic, but it's open standard now.
+```bash
+python3 ~/.claude/skills/africastalking-sms/scripts/send_sms.py \
+  --to "+256787624334" \
+  --message "Hello from the script"
+```
 
-**Q: How is this different from MCP (Model Context Protocol)?**
-A: MCP is for **connecting** an agent to external **services** (a database, a calendar, an API). Skills are **instructions** that teach an agent **how to perform a task** — often using those MCP-connected services. Complementary, not competing.
+For full skill specification — all flags, sandbox testing, multi-recipient bulk sends, per-status-code semantics, and gotchas — see [`demo-skill/africastalking-sms/SKILL.md`](demo-skill/africastalking-sms/SKILL.md).
 
-**Q: How is this different from system prompts?**
-A: System prompts are baked into the agent and apply to every conversation. Skills are **on-demand** — loaded only when relevant via the description match. So you can have many specialised skills without bloating every conversation.
+## Slides
 
-**Q: Do I need to know Python?**
-A: No. The minimal skill is just a `SKILL.md` with frontmatter and Markdown. Scripts are optional. You can write skills entirely in plain text.
+The deck is written in [Marp](https://marp.app/). Read `slides.md` for the source; open `slides.pptx` or `slides.pdf` for a rendered version. To re-render after editing the markdown:
 
-**Q: Can skills call APIs / external services?**
-A: Yes — through `scripts/` (e.g., a Python script using `requests`), or via MCP connectors the agent has, or via the agent's built-in tools. The skill instructs the agent on **when** and **how** to make the call.
+```bash
+npx @marp-team/marp-cli slides.md --pdf  --output slides.pdf  --allow-local-files
+npx @marp-team/marp-cli slides.md --pptx --output slides.pptx --allow-local-files
+```
 
-**Q: Where do skills live? In my project repo? In my home directory?**
-A: Both work. **Project-level** skills live at `.claude/skills/` (or equivalent for your agent) — they ship with the codebase, version-controlled. **User-level** skills live at `~/.claude/skills/` — available across all your projects on that machine. Use whichever scope fits.
+## FAQ
 
-**Q: Can I share my skills with my team?**
-A: Yes. Commit them to git like any other code. Or publish to a marketplace — there are several emerging (claudemarketplaces.com, agentskills.io directory).
+**How is this different from MCP (Model Context Protocol)?**
+MCP connects an agent to external *services* (a database, a calendar, an API). Skills are *instructions* that teach an agent how to perform a task — often using those MCP-connected services. Complementary, not competing.
 
-**Q: What's the biggest mistake beginners make?**
-A: Writing essays instead of workflows. The skill reads like documentation — but agents need step-by-step instructions with checkpoints. Process over prose.
+**How is this different from a system prompt?**
+System prompts apply to every conversation and are baked into the agent. Skills are loaded on-demand — only when their `description` matches what the user is asking — so you can have many specialised skills without bloating every conversation's context.
 
-**Q: Will agents replace developers?**
-A: No, but developers who use agents well will out-pace those who don't. Skills are how you teach agents your specific work. (Diplomatic answer that probably comes up.)
+**Do skills only work with Claude?**
+The format is open and supported by many products including Claude Code, Cursor, Codex, Gemini CLI, OpenCode, and others. Originally Anthropic-led; now adopted broadly.
 
-## Things to mention if running short on time
+**Do I need to write Python to make a skill?**
+No. The minimum is a `SKILL.md` file with frontmatter and Markdown. Scripts are optional. Some skills are entirely plain text — they just instruct the agent how to think about a task.
 
-- Skip "Anti-rationalization" slide (advanced)
-- Skip the second "common anti-pattern" slide
-- Compress the 5 design principles into 2 slides
+**Can skills call external APIs?**
+Yes — three ways: a script in the skill's `scripts/` folder (any language); an MCP connector the agent already has; or the agent's built-in tools (Bash, WebFetch, etc.). The skill tells the agent *when* and *how*.
 
-## Things to add if running long
+**Where do skills live on disk?**
+Two scopes: `~/.claude/skills/<name>/` for user-level (across all projects on your machine), or `<project-root>/.claude/skills/<name>/` for project-level (ships with the codebase). Either works; pick whichever fits.
 
-- Walk through ALL the design principles with examples
-- Show the actual Python script content (`fetch_feeds.py`)
-- Discuss skill-creator (the meta-skill that helps you write skills)
-- Demo the rewrite + publish step end-to-end (vs just the digest)
+**How do I share a skill with a team?**
+Commit it to git like any other code. Or publish to a marketplace — see [skills.sh](https://skills.sh), [claudemarketplaces.com/skills](https://claudemarketplaces.com/skills), or the [agentskills.io](https://agentskills.io) directory.
 
-## After the talk
+**What's the most common beginner mistake?**
+Writing the skill like documentation when it should be a workflow. Agents follow step-by-step instructions with checkpoints, not paragraphs of prose.
 
-- Push slides to a public location (your blog, GitHub) and tweet the link
-- Mention the dignited site as a real production reference
-- Encourage attendees to start with a tiny single-purpose skill, not a mega one
+## Speaker
+
+**David Okwii** — Lead Software Developer at Serve Digital, Kampala. Also runs [dignited.com](https://dignited.com), Uganda's tech blog (since 2013), where he's been building production AI agent pipelines.
+
+- 🐦 [@oquidave](https://twitter.com/oquidave)
+- 📧 oquidave@gmail.com
+
+## Resources from the talk
+
+- [agentskills.io](https://agentskills.io) — the open spec for the skill format
+- [code.claude.com/docs/en/skills](https://code.claude.com/docs/en/skills) — Claude Code skill docs
+- [Addy Osmani on agent skills](https://addyosmani.com/blog/agent-skills/) — design principles
+- [skills.sh](https://skills.sh) · [claudemarketplaces.com/skills](https://claudemarketplaces.com/skills) — skill marketplaces
+- [github.com/anthropics/skills](https://github.com/anthropics/skills) — Anthropic's official skills
+- [Africa's Talking SMS API docs](https://developers.africastalking.com/docs/sms/overview) — used by the demo skill
+
+## License
+
+Skill code (`demo-skill/`) is MIT — feel free to fork, adapt, and ship.
+Slides are CC-BY 4.0 — remix freely with attribution.

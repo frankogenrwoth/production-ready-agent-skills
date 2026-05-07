@@ -2,11 +2,11 @@
 """Send an SMS via the Africa's Talking API.
 
 Stdlib-only — no `requests`, no `africastalking` SDK. Reads credentials from
-the AT_USERNAME and AT_API_KEY environment variables; the API key is never
-written to disk by this script.
+the AT_USERNAME, AT_API_KEY, and AT_SENDER_ID environment variables; the
+API key is never written to disk by this script.
 
 Usage:
-    AT_USERNAME=<your-username> AT_API_KEY=<your-key> \\
+    AT_USERNAME=<u> AT_API_KEY=<k> AT_SENDER_ID=<id> \\
       python3 send_sms.py --to "+256700000000" --message "Hello"
 
 Exit codes:
@@ -63,7 +63,8 @@ def main() -> int:
     p.add_argument("--message", required=True,
                    help="The SMS body. Up to 160 chars per single segment; longer messages get split.")
     p.add_argument("--sender-id", default="",
-                   help="Optional sender ID registered with your AT account.")
+                   help="Sender ID registered with your AT account. Falls back to "
+                        "the AT_SENDER_ID env var. Required.")
     p.add_argument("--sandbox", action="store_true",
                    help="POST to AT's sandbox endpoint (no real SMS goes out). Default is production.")
     p.add_argument("--enqueue", action="store_true",
@@ -79,7 +80,21 @@ def main() -> int:
         print(
             "error: AT_USERNAME and AT_API_KEY environment variables are required.\n"
             "  Get them from your Africa's Talking dashboard at https://account.africastalking.com/.\n"
-            "  Then run with: AT_USERNAME=<u> AT_API_KEY=<k> python3 send_sms.py ...",
+            "  Then run with: AT_USERNAME=<u> AT_API_KEY=<k> AT_SENDER_ID=<id> python3 send_sms.py ...",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Sender ID: AT requires a registered sender ID (alphanumeric or shortcode)
+    # for branded, deliverable bulk SMS in many markets including Uganda. CLI flag
+    # wins if both are set, so an operator can override per call.
+    sender_id = (args.sender_id or os.environ.get("AT_SENDER_ID", "")).strip()
+    if not sender_id:
+        print(
+            "error: a sender ID is required. Set the AT_SENDER_ID env var to your\n"
+            "  registered sender ID (alphanumeric, e.g. 'DIGNITED', or a shortcode),\n"
+            "  or pass --sender-id <id>. Register sender IDs in the AT dashboard at\n"
+            "  https://account.africastalking.com/apps/sandbox/sms/shortcodes.",
             file=sys.stderr,
         )
         return 1
@@ -108,9 +123,8 @@ def main() -> int:
         "username": username,
         "to": ",".join(recipients),
         "message": args.message,
+        "from": sender_id,
     }
-    if args.sender_id:
-        params["from"] = args.sender_id
     if args.enqueue:
         params["enqueue"] = "true"
 

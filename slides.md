@@ -478,7 +478,7 @@ Why this skill, why this venue: AT host this event. Showing their API integrated
 - A folder at `~/.claude/skills/africastalking-sms/` with:
   - `SKILL.md` — the instructions
   - `scripts/send_sms.py` — the executor (Python stdlib only, no SDK)
-- `AT_USERNAME` and `AT_API_KEY` env vars set in the shell
+- Three env vars in the shell: `AT_USERNAME`, `AT_API_KEY`, `AT_SENDER_ID`
 
 **What we explicitly DON'T do:**
 
@@ -503,8 +503,8 @@ description: Send an SMS via the Africa's Talking SMS API.
   that involves delivering a short message to a mobile phone
   in Africa.
 license: MIT
-compatibility: Requires Python 3 and AT_USERNAME + AT_API_KEY
-  environment variables.
+compatibility: Requires Python 3 and AT_USERNAME +
+  AT_API_KEY + AT_SENDER_ID env vars.
 ---
 
 # Africa's Talking SMS
@@ -513,9 +513,13 @@ compatibility: Requires Python 3 and AT_USERNAME + AT_API_KEY
 Trigger when the user asks to send an SMS, OTP, alert, ...
 
 ## Required environment variables
-| Variable | Example |
-| AT_USERNAME | `odukar` |
-| AT_API_KEY | `atsk_xxxxx…` |
+| Variable      | Example       |
+| AT_USERNAME   | `odukar`      |
+| AT_API_KEY    | `atsk_xxxxx…` |
+| AT_SENDER_ID  | `DIGNITED`    |
+
+Sender ID is **required** — AT (and Uganda's regulator)
+won't deliver bulk SMS without a registered one.
 
 Never paste the API key into a SKILL.md or commit it to git.
 ```

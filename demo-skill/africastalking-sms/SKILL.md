@@ -2,7 +2,7 @@
 name: africastalking-sms
 description: Send an SMS via the Africa's Talking SMS API. Use whenever the user wants to send a text message, alert, OTP, notification, "send SMS to <number>", or any phrasing that involves delivering a short message to a mobile phone in Africa. The skill posts to Africa's Talking's REST endpoint and returns the delivery status.
 license: MIT
-compatibility: Requires Python 3 (stdlib only) and the AT_USERNAME + AT_API_KEY environment variables.
+compatibility: Requires Python 3 (stdlib only) and the AT_USERNAME + AT_API_KEY + AT_SENDER_ID environment variables.
 metadata:
   author: David Okwii
   venue: Africa's Talking East Africa Hub, Kampala
@@ -28,14 +28,17 @@ If the user just wants to send a *file* or *long content*, this is the wrong ski
 
 ## Required environment variables
 
-Two env vars must be set before invoking the skill:
+Three env vars must be set before invoking the skill:
 
 | Variable | What it is | Example |
 |---|---|---|
-| `AT_USERNAME` | Your Africa's Talking account username (or the literal string `sandbox`) | `dignited` |
+| `AT_USERNAME` | Your Africa's Talking account username (or the literal string `sandbox`) | `odukar` |
 | `AT_API_KEY` | The API key from your Africa's Talking dashboard | `atsk_xxxxx…` |
+| `AT_SENDER_ID` | A sender ID registered with your AT account — alphanumeric (e.g. `DIGNITED`) or a shortcode | `DIGNITED` |
 
-If either is missing, the script errors out clearly and refuses to send. **Never paste the API key into a `SKILL.md` or commit it to git** — that's a credential-leak landmine.
+If any are missing, the script errors out clearly and refuses to send. The sender ID is **required** because AT (and Uganda's regulator) won't reliably deliver bulk SMS without one — without it, messages either get dropped or sent under a generic pool shortcode that recipients distrust.
+
+**Never paste the API key into a `SKILL.md` or commit it to git** — that's a credential-leak landmine.
 
 ## How to use
 
@@ -51,7 +54,7 @@ The script substitutes the skill's directory at runtime — Claude Code shows th
 
 - `--to "<number>"` — required. E.164 format with `+` and country code (e.g. `+254700112233`). Multiple numbers comma-separated.
 - `--message "<text>"` — required. Plain text. Up to 160 chars per single SMS; longer messages get split and billed per segment.
-- `--sender-id "<id>"` — optional. An alphanumeric or shortcode sender ID **registered with your AT account**. Without this, AT uses a default shared shortcode.
+- `--sender-id "<id>"` — overrides `AT_SENDER_ID` for a single call. The sender ID itself is required — set it via env var or this flag.
 - `--sandbox` — optional. POSTs to the sandbox endpoint instead of production. Useful for testing — the API call returns success but no actual SMS goes out. Defaults to production (real SMS).
 - `--enqueue` — optional. Tells AT to queue the request and return immediately rather than waiting for telco acknowledgement. Useful for bulk sends.
 
@@ -103,16 +106,16 @@ The API charges per recipient. Surface the total cost back to the user.
 When testing the skill without using credits or sending real SMS:
 
 ```bash
-AT_USERNAME=sandbox AT_API_KEY=<sandbox-key> python3 scripts/send_sms.py \
-  --to "+256700123456" --message "Test" --sandbox
+AT_USERNAME=sandbox AT_API_KEY=<sandbox-key> AT_SENDER_ID=test \
+  python3 scripts/send_sms.py --to "+256700123456" --message "Test" --sandbox
 ```
 
-The sandbox endpoint accepts the call and returns a success response, but no SMS goes to the actual phone.
+The sandbox endpoint accepts the call and returns a success response, but no SMS goes to the actual phone. AT_SENDER_ID is still required — sandbox doesn't validate it but the script does.
 
 ## Things to watch out for
 
 - **Phone number format is strict.** AT requires E.164 (`+<country><number>`). Sending `0700123456` (Kenyan local format) returns an error. Always normalise to international format first.
-- **Sender ID must be registered.** If you pass `--sender-id "DIGNITED"` without registering that ID with your AT account, the message goes out under a default shortcode anyway and AT silently ignores the override. Register sender IDs in the AT dashboard before relying on them.
+- **Sender ID must be registered.** If you set `AT_SENDER_ID=DIGNITED` without registering that ID with your AT account, AT silently ignores it and the message either fails or goes out under a generic shortcode. Register sender IDs in the AT dashboard before relying on them — sender ID approval can take 24–72h.
 - **Cost is per recipient, per segment.** A 200-char message to 100 people is 100 × 2 segments = 200 billable units. Budget before bulk sends.
 - **Production keys vs sandbox keys are different.** A key from your sandbox account won't work against the production endpoint and vice versa. Sandbox `username` is always `sandbox`.
 - **Don't echo the API key in any output.** The script intentionally never prints it. If you're debugging via curl, use `Authorization` masking.

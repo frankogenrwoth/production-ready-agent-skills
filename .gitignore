@@ -1,0 +1,17 @@
+# LibreOffice / Office lockfiles
+.~lock.*#
+
+# macOS / editor junk
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Build artifacts (slides.pptx and slides.pdf are checked in intentionally)
+node_modules/
+__pycache__/
+*.pyc
+
+# Local secrets — never commit. The skill reads creds from env vars at runtime.
+.env
+*.secret
